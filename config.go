@@ -72,6 +72,11 @@ func NewConfig(filename string) (*ConfigType, error) {
 }
 
 func (ct *ConfigType) Get(key, subkey string) string {
+	if ct == nil {
+		fmt.Println("conf is nil")
+		return ""
+	}
+
 	if submap, ok := ct.Sess[key]; ok {
 		if val, ok := submap[subkey]; ok {
 			return val
