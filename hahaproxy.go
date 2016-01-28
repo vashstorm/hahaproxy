@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	_ "net/http/pprof"
 	"os"
 	"os/signal"
 	"runtime/pprof"
@@ -24,8 +25,7 @@ var conffile = "proxy.conf"
 func SetLog() error {
 	logjsonconf := `{
 		"filename":"log.log",
-		"maxLines":900000,
-		"daily":false,
+		"daily":true,
 		"maxDays":15,
 		"rotate":true,
 		"perm":600
@@ -53,11 +53,14 @@ func SetLog() error {
 	}
 
 	log.SetLogger("file", string(jsonconf))
-	log.EnableFuncCallDepth(true)
 
-	loglevelstr := conf.Get("global", "level")
+	loglevelstr := conf.Get("global", "loglevel")
 	if len(loglevelstr) == 0 {
 		loglevelstr = "8" // Debug
+	}
+
+	if loglevelstr > "3" {
+		log.EnableFuncCallDepth(true)
 	}
 
 	loglevel, err := strconv.Atoi(loglevelstr)
@@ -124,6 +127,9 @@ func main() {
 	}
 	go monitorConf(conffile, watcher)
 
+	// if some work cannot bind, app exit!!
+	bindok := make(chan byte)
+
 MAINLOGIC:
 	// main logic
 	allsess := conf.AllKey()
@@ -139,7 +145,7 @@ MAINLOGIC:
 			oneServer.Name = sess
 			oneServer.Triger = make(chan string, 1)
 			sermap[sess] = oneServer
-			go oneServer.Start() // start
+			go oneServer.Start(bindok) // start
 		} else {
 			log.Info("reload Server [%s]", sess)
 			oneServer.Triger <- "reload"
@@ -147,6 +153,12 @@ MAINLOGIC:
 	}
 
 	// main loop
+
+	select {
+	case <-bindok:
+		return
+	case <-time.After(2 * time.Second):
+	}
 
 	for {
 		select {

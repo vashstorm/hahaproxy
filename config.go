@@ -8,10 +8,6 @@ import (
 	"strings"
 )
 
-// type ConfigItem struct {
-// 	Item map[string]string
-// }
-
 type ConfigType struct {
 	Filename string `config file`
 	Sess     map[string]map[string]string
@@ -37,6 +33,14 @@ func NewConfig(filename string) (*ConfigType, error) {
 
 		if strings.HasPrefix(line, " ") || strings.HasPrefix(line, "\t") {
 			kv := strings.Fields(line)
+
+			for i, val := range kv {
+				if strings.HasPrefix(val, "#") {
+					kv = kv[:i]
+					break
+				}
+			}
+
 			if len(kv) == 0 {
 				continue
 			}
@@ -54,6 +58,14 @@ func NewConfig(filename string) (*ConfigType, error) {
 			}
 		} else {
 			kv := strings.Fields(line)
+
+			for i, val := range kv {
+				if strings.HasPrefix(val, "#") {
+					kv = kv[:i]
+					break
+				}
+			}
+
 			if len(kv) == 0 {
 				continue
 			}
